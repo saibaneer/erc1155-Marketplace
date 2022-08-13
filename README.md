@@ -1,5 +1,7 @@
 
-###The UserDefined ERC1155 Project:
+##The UserDefined ERC1155 Project:
+
+
 This project allows for the minting of ERC1155 tokens that can be listed on the Marketplace. The project holds 5 contracts that contribute all the features developed within the contract. These features are:
 - Minting of new instances ERC1155 Collection tokens.
 - Minting from this contract is relatively more expensive as it deploys a fresh ERC1155 contact with a user-specified quantity of tokens.
