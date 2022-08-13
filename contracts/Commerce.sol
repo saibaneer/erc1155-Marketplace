@@ -5,8 +5,9 @@ import "./NFTStorage.sol";
 import "./AdminContract.sol";
 import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import "hardhat/console.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract Commerce {
+contract Commerce is ReentrancyGuard {
 
 
     event SendOffer(uint indexed tokenId,address nftAddress, address tokenOwner, uint indexed quantity, address sender, uint offer, uint indexed index);
@@ -22,7 +23,7 @@ contract Commerce {
     AdminConsole admin;
     address immutable owner;
 
-    constructor(address _vault, address _admin){
+    constructor(address _vault, address _admin) ReentrancyGuard() {
         vault = MyNFTStorage(_vault);
         admin = AdminConsole(_admin);
         owner = msg.sender;
@@ -80,7 +81,7 @@ contract Commerce {
         return myOffers;
     }
 
-    function acceptOffer(address nftAddress, uint tokenId, uint index) external {
+    function acceptOffer(address nftAddress, uint tokenId, uint index) external nonReentrant() {
         Offers memory acceptedOffer = buyOffers[nftAddress][tokenId][msg.sender][index];
         require(vault.isOwner(nftAddress, tokenId, msg.sender) == true, "You are not authorized!");
         require(vault.verifyQuantityIsAvailable(nftAddress, tokenId, msg.sender, acceptedOffer.qty) == true, "You do not have sufficient units to accept this token!");
@@ -108,7 +109,7 @@ contract Commerce {
         
     }
 
-    function withdrawOffer(address nftAddress, uint tokenId, address tokenOwner) external {
+    function withdrawOffer(address nftAddress, uint tokenId, address tokenOwner) external nonReentrant() {
         (bool hasOffer, uint index, uint amount) = offerExists(nftAddress, tokenId, tokenOwner, msg.sender);
         require(hasOffer, "Commerce: You do not have an existing offer!");
         Offers[] storage allOffer = buyOffers[nftAddress][tokenId][tokenOwner];       
@@ -145,13 +146,13 @@ contract Commerce {
         emit WithdrewNFT(tokenId, nftAddress, msg.sender, quantity);
     }
 
-    function withdrawFunds() payable public {
+    function withdrawFunds() payable public nonReentrant() {
         uint amount = deposits[msg.sender];
-
+        deposits[msg.sender] = 0;
         (bool success, ) = payable(msg.sender).call{value: amount}("");
         require(success, "Failed to send Ether");
 
-        deposits[msg.sender] = 0;
+        
 
         emit WithdrewFunds(msg.sender, amount);
     }
@@ -160,11 +161,11 @@ contract Commerce {
         address feeAccount = admin.getFeeAccount();
         require(msg.sender == feeAccount, "You are not authorized!");
         uint amount = deposits[feeAccount];
-
+        deposits[feeAccount] = 0;
         (bool success, ) = payable(feeAccount).call{value: (amount*99)/100}("");
         require(success, "Failed to send Ether");
 
-        deposits[feeAccount] = 0;
+        
 
         emit WithdrewMarketFunds(feeAccount, amount);
     }
